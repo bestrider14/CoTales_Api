@@ -9,14 +9,14 @@ import lombok.Setter;
 @Entity
 @Table(name = "Countries")
 public class Country {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "id")
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
 
-  @Column(name = "name")
-  private String name;
+    @Column(name = "name")
+    private String name;
 
-  @Column(name = "code_iso")
-  private String codeIso;
+    @Column(name = "code_iso")
+    private String codeIso;
 }

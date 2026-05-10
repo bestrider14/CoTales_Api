@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Get staged Java files
+STAGED_JAVA=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.java$')
+
+if [ -z "$STAGED_JAVA" ]; then
+  exit 0
+fi
+
+echo "[pre-commit] Running Spotless..."
+
+mvn spotless:apply -q
+if [ $? -ne 0 ]; then
+  echo "[pre-commit] Spotless failed. Commit aborted."
+  exit 1
+fi
+
+# Re-stage only the files that were originally staged
+for FILE in $STAGED_JAVA; do
+  if [ -f "$FILE" ]; then
+    git add "$FILE"
+  fi
+done
+
+echo "[pre-commit] Spotless applied."
+exit 0

@@ -17,39 +17,39 @@ import java.time.OffsetDateTime;
 @NoArgsConstructor
 @Table(name = "Profiles")
 public class Profile {
-  @Id
-  @Column(name = "user_id")
-  private Long id;
+    @Id
+    @Column(name = "user_id")
+    private Long id;
 
-  @MapsId
-  @OneToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "user_id")
-  private User user;
+    @MapsId
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
-  @Column(name = "first_name")
-  private String firstName;
+    @Column(name = "first_name")
+    private String firstName;
 
-  @Size(max = 100)
-  @Column(name = "last_name")
-  private String lastName;
+    @Size(max = 100)
+    @Column(name = "last_name")
+    private String lastName;
 
-  @Column(name = "bio")
-  private String bio;
+    @Column(name = "bio")
+    private String bio;
 
-  @Column(name = "birth_date")
-  private LocalDate birthDate;
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
 
-  @Column(name = "gender")
-  private String gender;
+    @Column(name = "gender")
+    private String gender;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "country_id")
-  private Country country;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "country_id")
+    private Country country;
 
-  @Column(name = "updated_at")
-  private OffsetDateTime updatedAt;
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
 
-  public Profile(User user) {
-    this.user = user;
-  }
+    public Profile(User user) {
+        this.user = user;
+    }
 }
