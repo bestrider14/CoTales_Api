@@ -1,12 +1,11 @@
-package com.cotales.cotales_api.user;
+package com.cotales.cotales_api.user.user;
 
 import jakarta.persistence.*;
+import java.time.OffsetDateTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
-
-import java.time.OffsetDateTime;
 
 @Getter
 @Setter

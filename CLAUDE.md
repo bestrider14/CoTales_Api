@@ -52,7 +52,7 @@ Flyway manages the schema — no manual DDL needed. Hibernate `ddl-auto` is set 
 
 **Package convention**: Feature-based (`com.cotales.cotales_api.<domain>.<subdomain>`). The `user` domain is split into `user/`, `account/`, and `profile/` subpackages.
 
-**Base controller**: `common.ApiV1Controller` is an abstract class that sets the `/api/v1` path prefix — all REST controllers extend it.
+**Base controller**: `common.ApiController` is an abstract class that sets the API path prefix — all REST controllers extend it. The prefix is configured via `api.prefix` in `application.yaml` (default `/api/v1`), so changing the version is a one-line config change. Child controllers declare only their resource path (e.g., `/users`).
 
 **Entity patterns**:
 - Soft deletes via `deletedAt` / `bannedAt` timestamps (no hard deletes)

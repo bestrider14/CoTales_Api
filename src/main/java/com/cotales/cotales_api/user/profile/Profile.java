@@ -1,15 +1,14 @@
 package com.cotales.cotales_api.user.profile;
 
-import com.cotales.cotales_api.user.User;
 import com.cotales.cotales_api.user.profile.Address.Country;
+import com.cotales.cotales_api.user.user.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
 
 @Getter
 @Setter
