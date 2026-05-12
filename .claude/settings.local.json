@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(git *)",
-      "Bash(xargs grep -l \"Repository\\\\|Service\\\\|Controller\")"
-    ]
-  }
-}
