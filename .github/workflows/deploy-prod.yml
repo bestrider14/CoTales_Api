@@ -1,0 +1,14 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      environment: prod
+      spring-profile: prod
+      image-tag: ${{ github.sha }}
+    secrets: inherit

@@ -1,0 +1,8 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+  jwt:
+    isProduction: true
+  security:
+    debug: false

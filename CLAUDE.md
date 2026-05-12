@@ -76,6 +76,33 @@ The full schema is in `src/main/resources/db/migration/`. Key domains beyond the
 
 When adding a new entity, write a Flyway migration rather than relying on Hibernate schema generation.
 
+## CI/CD
+
+**Branch → Environment mapping:**
+| Branch | Environment | Spring profile |
+|--------|-------------|----------------|
+| `develop` | dev | `dev` |
+| `staging` | staging | `staging` |
+| `main` | prod | `prod` |
+
+Feature branches and PRs run `ci.yml` only (no deploy). Deploy branches run tests first, then build + push to ECR, then deploy to ECS Fargate.
+
+**GitHub secrets required per environment** (set under *Settings → Environments* for `dev`, `staging`, `prod`):
+
+| Secret | Description |
+|--------|-------------|
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | IAM user credentials |
+| `AWS_REGION` | e.g. `eu-west-1` |
+| `ECR_REPOSITORY` | ECR repo name, e.g. `cotales-api` |
+| `ECS_TASK_DEFINITION` | Task definition family name, e.g. `cotales-api-dev` |
+| `ECS_CLUSTER` | ECS cluster name |
+| `ECS_SERVICE` | ECS service name |
+| `DATASOURCE_URL` | Full JDBC URL for that environment's DB |
+| `DATASOURCE_USERNAME` / `DATASOURCE_PASSWORD` | DB credentials |
+| `JWT_SECRET` | HS256 key (min 32 bytes) |
+
+The ECS task definition must have a container named `cotales-api`. The workflow fetches the current task definition, swaps the image, and redeploys — so the task definition must exist in AWS before first deploy.
+
 ## API Documentation
 
 SpringDoc generates OpenAPI docs at `/swagger-ui.html` when the app is running.
