@@ -1,0 +1,12 @@
+aws_region  = "eu-west-1"
+db_password = "change-me-strong-password-min-8-chars"
+
+# Point DNS A records for each domain to the alb_dns_name output after apply.
+domain_names = {
+  dev     = "dev-api.yourdomain.com"
+  staging = "staging-api.yourdomain.com"
+  prod    = "api.yourdomain.com"
+}
+
+# Uncomment after creating an ACM certificate to enable HTTPS:
+# acm_certificate_arn = "arn:aws:acm:eu-west-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"

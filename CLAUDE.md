@@ -76,6 +76,35 @@ The full schema is in `src/main/resources/db/migration/`. Key domains beyond the
 
 When adding a new entity, write a Flyway migration rather than relying on Hibernate schema generation.
 
+## Infrastructure (Terraform)
+
+All AWS infrastructure lives in `infra/`. Requires [Terraform >= 1.6](https://developer.hashicorp.com/terraform/install) and AWS CLI configured with an admin account.
+
+```bash
+cd infra
+
+# First time
+cp terraform.tfvars.example terraform.tfvars   # fill in aws_region, db_password, domain_names
+terraform init
+terraform plan
+terraform apply
+```
+
+After apply, run `terraform output` to get all values needed for GitHub secrets:
+
+```bash
+terraform output                                          # all non-sensitive outputs
+terraform output github_actions_secret_access_key        # AWS_SECRET_ACCESS_KEY
+```
+
+**Architecture:** 1 VPC → 1 shared ALB (host-based routing) → 3 ECS Fargate services (dev/staging/prod) → 3 RDS PostgreSQL db.t3.micro instances. ECS tasks run in public subnets with `assign_public_ip=true` (avoids NAT Gateway cost). RDS runs in private subnets.
+
+**Scaling path:** upgrade prod to `db.t3.small` + `multi_az=true`, increase ECS `cpu`/`memory`/`desired_count`, enable `containerInsights` in `ecs.tf`, enable S3 backend in `main.tf` for shared state.
+
+**HTTPS:** create an ACM certificate in the AWS console, then set `acm_certificate_arn` in `terraform.tfvars` and re-run `terraform apply`.
+
+**Task definitions:** Terraform bootstraps each task definition with an `nginx` placeholder. The first CI/CD deploy replaces it with the real image. Subsequent `terraform apply` runs do **not** revert CI/CD changes (`lifecycle { ignore_changes = [container_definitions] }`).
+
 ## CI/CD
 
 **Branch → Environment mapping:**
