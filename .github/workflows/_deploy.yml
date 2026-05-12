@@ -1,11 +1,8 @@
-name: Deploy to environment
+name: Deploy
 
 on:
   workflow_call:
     inputs:
-      environment:
-        required: true
-        type: string
       spring-profile:
         required: true
         type: string
@@ -16,7 +13,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
 
     services:
       postgres:
@@ -69,30 +65,26 @@ jobs:
           docker build -t $IMAGE .
           docker push $IMAGE
 
-      - name: Fetch current ECS task definition
+      - name: Deploy to server via SSH
+        env:
+          IMAGE: ${{ steps.ecr-login.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ inputs.image-tag }}
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          SPRING_PROFILE: ${{ inputs.spring-profile }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
-          aws ecs describe-task-definition \
-            --task-definition ${{ secrets.ECS_TASK_DEFINITION }} \
-            --query taskDefinition > task-definition.json
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > /tmp/ec2.pem
+          chmod 600 /tmp/ec2.pem
 
-      - name: Inject new image into task definition
-        id: render-task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: task-definition.json
-          container-name: cotales-api
-          image: ${{ steps.ecr-login.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ inputs.image-tag }}
-          environment-variables: |
-            SPRING_PROFILES_ACTIVE=${{ inputs.spring-profile }}
-            DATASOURCE_URL=${{ secrets.DATASOURCE_URL }}
-            DATASOURCE_USERNAME=${{ secrets.DATASOURCE_USERNAME }}
-            DATASOURCE_PASSWORD=${{ secrets.DATASOURCE_PASSWORD }}
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
+          # Copy the latest compose file to the server
+          scp -i /tmp/ec2.pem -o StrictHostKeyChecking=no \
+            deploy/docker-compose.yml ec2-user@${{ secrets.EC2_HOST }}:~/docker-compose.yml
 
-      - name: Deploy to ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-        with:
-          task-definition: ${{ steps.render-task-def.outputs.task-definition }}
-          service: ${{ secrets.ECS_SERVICE }}
-          cluster: ${{ secrets.ECS_CLUSTER }}
-          wait-for-service-stability: true
+          # Login to ECR on the server (uses EC2 instance profile — no credentials stored)
+          # Then pull the new image and restart only the app container (DB keeps running)
+          ssh -i /tmp/ec2.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} \
+            "aws ecr get-login-password --region $AWS_REGION \
+               | docker login --username AWS --password-stdin $ECR_REGISTRY \
+             && APP_IMAGE=$IMAGE SPRING_PROFILE=$SPRING_PROFILE \
+                docker compose -f ~/docker-compose.yml up -d --no-deps app"
+
+          rm /tmp/ec2.pem

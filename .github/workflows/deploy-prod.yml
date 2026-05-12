@@ -1,4 +1,4 @@
-name: Deploy to Production
+name: Deploy (prod)
 
 on:
   push:
@@ -8,7 +8,6 @@ jobs:
   deploy:
     uses: ./.github/workflows/_deploy.yml
     with:
-      environment: prod
       spring-profile: prod
       image-tag: ${{ github.sha }}
     secrets: inherit

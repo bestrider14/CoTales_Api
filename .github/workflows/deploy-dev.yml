@@ -1,4 +1,4 @@
-name: Deploy to Dev
+name: Deploy (dev)
 
 on:
   push:
@@ -8,7 +8,6 @@ jobs:
   deploy:
     uses: ./.github/workflows/_deploy.yml
     with:
-      environment: dev
       spring-profile: dev
       image-tag: dev-${{ github.sha }}
     secrets: inherit

@@ -6,9 +6,13 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
   }
 
-  # Uncomment once you have an S3 bucket for shared state (recommended for teams):
+  # Uncomment to store state in S3 when working with a team:
   # backend "s3" {
   #   bucket  = "cotales-terraform-state"
   #   key     = "infra/terraform.tfstate"
@@ -25,10 +29,6 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
-locals {
-  azs = slice(data.aws_availability_zones.available.names, 0, 2)
-}
-
 # ── VPC ──────────────────────────────────────────────────────────────────────
 
 resource "aws_vpc" "main" {
@@ -39,24 +39,12 @@ resource "aws_vpc" "main" {
   tags = { Name = "${var.app_name}-vpc" }
 }
 
-# Public subnets — ALB and ECS tasks (tasks use assign_public_ip, no NAT Gateway needed)
 resource "aws_subnet" "public" {
-  count             = 2
   vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.${count.index + 1}.0/24"
-  availability_zone = local.azs[count.index]
+  cidr_block        = "10.0.1.0/24"
+  availability_zone = data.aws_availability_zones.available.names[0]
 
-  tags = { Name = "${var.app_name}-public-${count.index + 1}" }
-}
-
-# Private subnets — RDS only
-resource "aws_subnet" "private" {
-  count             = 2
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.${count.index + 10}.0/24"
-  availability_zone = local.azs[count.index]
-
-  tags = { Name = "${var.app_name}-private-${count.index + 1}" }
+  tags = { Name = "${var.app_name}-public" }
 }
 
 resource "aws_internet_gateway" "main" {
@@ -73,11 +61,10 @@ resource "aws_route_table" "public" {
     gateway_id = aws_internet_gateway.main.id
   }
 
-  tags = { Name = "${var.app_name}-public-rt" }
+  tags = { Name = "${var.app_name}-rt" }
 }
 
 resource "aws_route_table_association" "public" {
-  count          = 2
-  subnet_id      = aws_subnet.public[count.index].id
+  subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.public.id
 }

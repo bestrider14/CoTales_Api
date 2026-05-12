@@ -82,55 +82,46 @@ All AWS infrastructure lives in `infra/`. Requires [Terraform >= 1.6](https://de
 
 ```bash
 cd infra
-
-# First time
-cp terraform.tfvars.example terraform.tfvars   # fill in aws_region, db_password, domain_names
+cp terraform.tfvars.example terraform.tfvars   # set aws_region
 terraform init
-terraform plan
 terraform apply
+
+# Get values for GitHub secrets
+terraform output
+terraform output -raw ec2_private_key_pem > cotales.pem && chmod 600 cotales.pem
+terraform output -raw github_actions_secret_access_key
 ```
 
-After apply, run `terraform output` to get all values needed for GitHub secrets:
+**Architecture:** 1 EC2 t3.micro running Docker + PostgreSQL in Docker on the same instance. One server handles everything — no ALB, no RDS, no ECS. ~$8/month (free tier for 12 months).
 
+**Server first-boot setup** (do once after `terraform apply`):
 ```bash
-terraform output                                          # all non-sensitive outputs
-terraform output github_actions_secret_access_key        # AWS_SECRET_ACCESS_KEY
+ssh -i cotales.pem ec2-user@<server_ip>
+cp deploy/.env.example ~/.env   # fill in POSTGRES_PASSWORD, JWT_SECRET
+# Copy docker-compose.yml (CI/CD does this automatically on every deploy)
 ```
 
-**Architecture:** 1 VPC → 1 shared ALB (host-based routing) → 3 ECS Fargate services (dev/staging/prod) → 3 RDS PostgreSQL db.t3.micro instances. ECS tasks run in public subnets with `assign_public_ip=true` (avoids NAT Gateway cost). RDS runs in private subnets.
-
-**Scaling path:** upgrade prod to `db.t3.small` + `multi_az=true`, increase ECS `cpu`/`memory`/`desired_count`, enable `containerInsights` in `ecs.tf`, enable S3 backend in `main.tf` for shared state.
-
-**HTTPS:** create an ACM certificate in the AWS console, then set `acm_certificate_arn` in `terraform.tfvars` and re-run `terraform apply`.
-
-**Task definitions:** Terraform bootstraps each task definition with an `nginx` placeholder. The first CI/CD deploy replaces it with the real image. Subsequent `terraform apply` runs do **not** revert CI/CD changes (`lifecycle { ignore_changes = [container_definitions] }`).
+**Scaling path (when ready):** migrate to ECS Fargate + RDS by re-enabling the removed Terraform files. The Dockerfile, ECR repo, and IAM setup are already in place — only the compute and database layers change.
 
 ## CI/CD
 
-**Branch → Environment mapping:**
-| Branch | Environment | Spring profile |
-|--------|-------------|----------------|
-| `develop` | dev | `dev` |
-| `staging` | staging | `staging` |
-| `main` | prod | `prod` |
+**Branch → deploy mapping:**
+| Branch | Spring profile | Deploys? |
+|--------|---------------|----------|
+| `develop` | `dev` | Yes → same server |
+| `main` | `prod` | Yes → same server |
+| feature branches / PRs | — | CI only (no deploy) |
 
-Feature branches and PRs run `ci.yml` only (no deploy). Deploy branches run tests first, then build + push to ECR, then deploy to ECS Fargate.
+**GitHub repository secrets** (Settings → Secrets → Actions):
 
-**GitHub secrets required per environment** (set under *Settings → Environments* for `dev`, `staging`, `prod`):
-
-| Secret | Description |
-|--------|-------------|
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | IAM user credentials |
-| `AWS_REGION` | e.g. `eu-west-1` |
-| `ECR_REPOSITORY` | ECR repo name, e.g. `cotales-api` |
-| `ECS_TASK_DEFINITION` | Task definition family name, e.g. `cotales-api-dev` |
-| `ECS_CLUSTER` | ECS cluster name |
-| `ECS_SERVICE` | ECS service name |
-| `DATASOURCE_URL` | Full JDBC URL for that environment's DB |
-| `DATASOURCE_USERNAME` / `DATASOURCE_PASSWORD` | DB credentials |
-| `JWT_SECRET` | HS256 key (min 32 bytes) |
-
-The ECS task definition must have a container named `cotales-api`. The workflow fetches the current task definition, swaps the image, and redeploys — so the task definition must exist in AWS before first deploy.
+| Secret | Where to get it |
+|--------|----------------|
+| `AWS_ACCESS_KEY_ID` | `terraform output github_actions_access_key_id` |
+| `AWS_SECRET_ACCESS_KEY` | `terraform output -raw github_actions_secret_access_key` |
+| `AWS_REGION` | same value as `aws_region` in tfvars |
+| `ECR_REPOSITORY` | `terraform output ecr_repository_name` |
+| `EC2_HOST` | `terraform output server_ip` |
+| `EC2_SSH_PRIVATE_KEY` | contents of `cotales.pem` (paste full PEM including header/footer) |
 
 ## API Documentation
 
