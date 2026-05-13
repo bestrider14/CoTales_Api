@@ -19,10 +19,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController extends ApiController {
 
     private final UserService userService;
+    private final AuthService authService;
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse register(@Valid @RequestBody CreateUserRequest request) {
         return userService.register(request);
+    }
+
+    @PostMapping("/login")
+    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
+        return authService.login(request);
     }
 }
