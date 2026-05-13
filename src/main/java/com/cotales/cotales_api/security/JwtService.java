@@ -1,82 +1,71 @@
 package com.cotales.cotales_api.security;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
 import java.util.Date;
-import javax.crypto.SecretKey;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.userdetails.UserDetails;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+@RequiredArgsConstructor
 @Service
 public class JwtService {
 
-    private final String secret;
-    private final long accessTokenExpiration;
-    private final long refreshTokenExpiration;
-    private final boolean isProduction;
+    private final JwtConfig jwtConfig;
 
-    public JwtService(
-            @Value("${spring.jwt.secret}") String secret,
-            @Value("${spring.jwt.accessTokenExpiration}") long accessTokenExpiration,
-            @Value("${spring.jwt.refreshTokenExpiration}") long refreshTokenExpiration,
-            @Value("${spring.jwt.isProduction}") boolean isProduction) {
-        this.secret = secret;
-        this.accessTokenExpiration = accessTokenExpiration;
-        this.refreshTokenExpiration = refreshTokenExpiration;
-        this.isProduction = isProduction;
+    public String generateToken(Long userId, String username, String email) {
+        return buildToken(userId, username, email, jwtConfig.getAccessTokenExpiration());
     }
 
-    public String generateToken(UserDetails userDetails) {
-        return buildToken(userDetails, accessTokenExpiration);
+    public String generateRefreshToken(Long userId, String username, String email) {
+        return buildToken(userId, username, email, jwtConfig.getRefreshTokenExpiration());
     }
 
-    public String generateRefreshToken(UserDetails userDetails) {
-        return buildToken(userDetails, refreshTokenExpiration);
+    public Long extractUserId(String token) {
+        return Long.parseLong(claims(token).getSubject());
     }
 
-    public String extractUsername(String token) {
-        return Jwts.parser()
-                .verifyWith(signingKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
+    public String extractEmail(String token) {
+        return claims(token).get("email", String.class);
     }
 
-    public boolean isTokenValid(String token, UserDetails userDetails) {
+    public boolean isTokenValid(String token) {
         try {
-            String username = extractUsername(token);
-            return username.equals(userDetails.getUsername());
+            claims(token);
+            return true;
         } catch (JwtException e) {
             return false;
         }
     }
 
     public long getAccessTokenExpiration() {
-        return accessTokenExpiration;
+        return jwtConfig.getAccessTokenExpiration();
     }
 
     public long getRefreshTokenExpiration() {
-        return refreshTokenExpiration;
+        return jwtConfig.getRefreshTokenExpiration();
     }
 
     public boolean isProduction() {
-        return isProduction;
+        return Boolean.TRUE.equals(jwtConfig.getIsProduction());
     }
 
-    private String buildToken(UserDetails userDetails, long expiration) {
+    private String buildToken(Long userId, String username, String email, long expiration) {
         return Jwts.builder()
-                .subject(userDetails.getUsername())
+                .subject(String.valueOf(userId))
+                .claim("username", username)
+                .claim("email", email)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiration * 1000))
-                .signWith(signingKey())
+                .signWith(jwtConfig.getSecretKey())
                 .compact();
     }
 
-    private SecretKey signingKey() {
-        return Keys.hmacShaKeyFor(Decoders.BASE64URL.decode(secret));
+    private Claims claims(String token) {
+        return Jwts.parser()
+                .verifyWith(jwtConfig.getSecretKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }

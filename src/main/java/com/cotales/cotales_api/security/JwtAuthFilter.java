@@ -8,7 +8,7 @@ import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -16,7 +16,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final UserDetailsServiceImpl userDetailsService;
 
     @Override
     protected void doFilterInternal(
@@ -31,17 +30,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         try {
             String token = authHeader.substring(7);
-            String email = jwtService.extractUsername(token);
-
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-                if (jwtService.isTokenValid(token, userDetails)) {
-                    UsernamePasswordAuthenticationToken auth =
-                            new UsernamePasswordAuthenticationToken(
-                                    userDetails, null, userDetails.getAuthorities());
-                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(auth);
-                }
+            if (jwtService.isTokenValid(token)
+                    && SecurityContextHolder.getContext().getAuthentication() == null) {
+                var userDetails =
+                        User.withUsername(jwtService.extractEmail(token))
+                                .password("")
+                                .authorities("ROLE_USER")
+                                .build();
+                var auth =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities());
+                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(auth);
             }
         } catch (Exception ignored) {
             // Invalid token — request continues as unauthenticated

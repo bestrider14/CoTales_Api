@@ -1,8 +1,10 @@
 package com.cotales.cotales_api.auth;
 
+import com.cotales.cotales_api.common.exception.NotFoundException;
 import com.cotales.cotales_api.common.exception.UnauthorizedException;
 import com.cotales.cotales_api.security.JwtService;
-import com.cotales.cotales_api.security.UserDetailsServiceImpl;
+import com.cotales.cotales_api.user.user.User;
+import com.cotales.cotales_api.user.user.UserRepository;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +12,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -18,32 +19,44 @@ import org.springframework.stereotype.Service;
 public class AuthService {
 
     private final AuthenticationManager authenticationManager;
-    private final UserDetailsServiceImpl userDetailsService;
+    private final UserRepository userRepository;
     private final JwtService jwtService;
 
     public AuthResponse login(LoginRequest request, HttpServletResponse response) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password()));
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(request.email());
-        setRefreshTokenCookie(response, jwtService.generateRefreshToken(userDetails));
-        return new AuthResponse(
-                jwtService.generateToken(userDetails), jwtService.getAccessTokenExpiration());
+        User user =
+                userRepository
+                        .findByEmail(request.email())
+                        .orElseThrow(() -> new NotFoundException("User not found"));
+
+        return buildAuthResponse(user, response);
     }
 
     public AuthResponse refresh(String refreshToken, HttpServletResponse response) {
         try {
-            String email = jwtService.extractUsername(refreshToken);
-            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-            if (!jwtService.isTokenValid(refreshToken, userDetails)) {
+            if (!jwtService.isTokenValid(refreshToken)) {
                 throw new UnauthorizedException("Invalid or expired refresh token");
             }
-            setRefreshTokenCookie(response, jwtService.generateRefreshToken(userDetails));
-            return new AuthResponse(
-                    jwtService.generateToken(userDetails), jwtService.getAccessTokenExpiration());
+            User user =
+                    userRepository
+                            .findById(jwtService.extractUserId(refreshToken))
+                            .orElseThrow(() -> new UnauthorizedException("User not found"));
+
+            return buildAuthResponse(user, response);
         } catch (JwtException e) {
             throw new UnauthorizedException("Invalid or expired refresh token");
         }
+    }
+
+    private AuthResponse buildAuthResponse(User user, HttpServletResponse response) {
+        setRefreshTokenCookie(
+                response,
+                jwtService.generateRefreshToken(user.getId(), user.getUsername(), user.getEmail()));
+        return new AuthResponse(
+                jwtService.generateToken(user.getId(), user.getUsername(), user.getEmail()),
+                jwtService.getAccessTokenExpiration());
     }
 
     private void setRefreshTokenCookie(HttpServletResponse response, String token) {
