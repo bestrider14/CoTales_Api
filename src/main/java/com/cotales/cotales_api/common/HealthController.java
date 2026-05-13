@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import javax.sql.DataSource;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
@@ -15,22 +16,16 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/health")
 public class HealthController extends ApiController {
 
     private final DataSource dataSource;
     private final Environment environment;
-    private final String appName;
 
-    public HealthController(
-            DataSource dataSource,
-            Environment environment,
-            @Value("${spring.application.name}") String appName) {
-        this.dataSource = dataSource;
-        this.environment = environment;
-        this.appName = appName;
-    }
+    @Value("${spring.application.name}")
+    private String appName;
 
     /** GET /api/v1/health — vérifie que l'app tourne */
     @GetMapping
