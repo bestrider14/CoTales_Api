@@ -1,6 +1,11 @@
 api:
   prefix: /api/v1
 
+cors:
+  allowed-origins:
+    - http://localhost:3000
+    - http://localhost:5173
+
 spring:
   application:
     name: Cotales
