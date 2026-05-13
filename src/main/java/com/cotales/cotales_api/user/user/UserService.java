@@ -29,8 +29,7 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Username already in use");
         }
 
-        User user = new User(request.username(), request.email());
-        userRepository.save(user);
+        User user = userRepository.save(new User(request.username(), request.email()));
 
         profileRepository.save(new Profile(user));
         accountRepository.save(
