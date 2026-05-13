@@ -20,7 +20,7 @@ class JwtServiceTest {
 
     @BeforeEach
     void setUp() {
-        jwtService = new JwtService(SECRET, 900, 604800);
+        jwtService = new JwtService(SECRET, 900, 604800, false);
         userDetails =
                 User.withUsername("user@mail.com")
                         .password("hashed")
@@ -69,7 +69,7 @@ class JwtServiceTest {
 
     @Test
     void isTokenValid_withExpiredToken_returnsFalse() {
-        JwtService shortLivedService = new JwtService(SECRET, -1, 604800);
+        JwtService shortLivedService = new JwtService(SECRET, -1, 604800, false);
         String token = shortLivedService.generateToken(userDetails);
 
         assertThat(jwtService.isTokenValid(token, userDetails)).isFalse();

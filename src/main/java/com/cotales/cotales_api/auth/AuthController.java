@@ -4,9 +4,11 @@ import com.cotales.cotales_api.common.ApiController;
 import com.cotales.cotales_api.user.user.CreateUserRequest;
 import com.cotales.cotales_api.user.user.UserResponse;
 import com.cotales.cotales_api.user.user.UserService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,7 +30,14 @@ public class AuthController extends ApiController {
     }
 
     @PostMapping("/login")
-    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+    public AuthResponse login(
+            @Valid @RequestBody LoginRequest request, HttpServletResponse response) {
+        return authService.login(request, response);
+    }
+
+    @PostMapping("/refresh")
+    public AuthResponse refresh(
+            @CookieValue("refreshToken") String refreshToken, HttpServletResponse response) {
+        return authService.refresh(refreshToken, response);
     }
 }

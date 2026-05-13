@@ -16,14 +16,17 @@ public class JwtService {
     private final String secret;
     private final long accessTokenExpiration;
     private final long refreshTokenExpiration;
+    private final boolean isProduction;
 
     public JwtService(
             @Value("${spring.jwt.secret}") String secret,
             @Value("${spring.jwt.accessTokenExpiration}") long accessTokenExpiration,
-            @Value("${spring.jwt.refreshTokenExpiration}") long refreshTokenExpiration) {
+            @Value("${spring.jwt.refreshTokenExpiration}") long refreshTokenExpiration,
+            @Value("${spring.jwt.isProduction}") boolean isProduction) {
         this.secret = secret;
         this.accessTokenExpiration = accessTokenExpiration;
         this.refreshTokenExpiration = refreshTokenExpiration;
+        this.isProduction = isProduction;
     }
 
     public String generateToken(UserDetails userDetails) {
@@ -54,6 +57,14 @@ public class JwtService {
 
     public long getAccessTokenExpiration() {
         return accessTokenExpiration;
+    }
+
+    public long getRefreshTokenExpiration() {
+        return refreshTokenExpiration;
+    }
+
+    public boolean isProduction() {
+        return isProduction;
     }
 
     private String buildToken(UserDetails userDetails, long expiration) {
