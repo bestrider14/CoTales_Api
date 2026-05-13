@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.cotales.cotales_api.common.exception.ConflictException;
 import com.cotales.cotales_api.user.account.Account;
 import com.cotales.cotales_api.user.account.AccountRepository;
 import com.cotales.cotales_api.user.profile.Profile;
@@ -17,9 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -83,30 +82,24 @@ class UserServiceTest {
     }
 
     @Test
-    void register_whenEmailAlreadyInUse_throwsConflict() {
+    void register_whenEmailAlreadyInUse_throwsConflictException() {
         when(userRepository.existsByEmail(VALID_REQUEST.email())).thenReturn(true);
 
         assertThatThrownBy(() -> userService.register(VALID_REQUEST))
-                .isInstanceOf(ResponseStatusException.class)
-                .satisfies(
-                        ex ->
-                                assertThat(((ResponseStatusException) ex).getStatusCode())
-                                        .isEqualTo(HttpStatus.CONFLICT));
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Email already in use");
 
         verify(userRepository, never()).save(any());
     }
 
     @Test
-    void register_whenUsernameAlreadyInUse_throwsConflict() {
+    void register_whenUsernameAlreadyInUse_throwsConflictException() {
         when(userRepository.existsByEmail(VALID_REQUEST.email())).thenReturn(false);
         when(userRepository.existsByUsername(VALID_REQUEST.username())).thenReturn(true);
 
         assertThatThrownBy(() -> userService.register(VALID_REQUEST))
-                .isInstanceOf(ResponseStatusException.class)
-                .satisfies(
-                        ex ->
-                                assertThat(((ResponseStatusException) ex).getStatusCode())
-                                        .isEqualTo(HttpStatus.CONFLICT));
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Username already in use");
 
         verify(userRepository, never()).save(any());
     }

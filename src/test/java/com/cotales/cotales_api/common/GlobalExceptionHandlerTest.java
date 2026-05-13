@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.cotales.cotales_api.common.exception.ConflictException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +26,19 @@ class GlobalExceptionHandlerTest {
         handler = new GlobalExceptionHandler();
         request = mock(HttpServletRequest.class);
         when(request.getRequestURI()).thenReturn("/api/v1/test");
+    }
+
+    @Test
+    void handleConflict_returns409WithMessage() {
+        ConflictException ex = new ConflictException("Email already in use");
+
+        ResponseEntity<ErrorResponse> response = handler.handleConflict(ex, request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody().status()).isEqualTo(409);
+        assertThat(response.getBody().error()).isEqualTo("Conflict");
+        assertThat(response.getBody().message()).isEqualTo("Email already in use");
+        assertThat(response.getBody().fieldErrors()).isNull();
     }
 
     @Test
