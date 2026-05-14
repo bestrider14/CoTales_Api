@@ -3,30 +3,28 @@ package com.cotales.cotales_api.user.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.cotales.cotales_api.auth.Provider;
 import com.cotales.cotales_api.common.exception.ConflictException;
-import com.cotales.cotales_api.user.account.Account;
-import com.cotales.cotales_api.user.account.AccountRepository;
-import com.cotales.cotales_api.user.profile.Profile;
-import com.cotales.cotales_api.user.profile.ProfileRepository;
+import com.cotales.cotales_api.user.account.AccountService;
+import com.cotales.cotales_api.user.profile.ProfileService;
 import java.time.OffsetDateTime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
     @Mock private UserRepository userRepository;
-    @Mock private AccountRepository accountRepository;
-    @Mock private ProfileRepository profileRepository;
-    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private AccountService accountService;
+    @Mock private ProfileService profileService;
 
     @InjectMocks private UserService userService;
 
@@ -37,7 +35,6 @@ class UserServiceTest {
     void register_withValidRequest_returnsUserResponse() {
         when(userRepository.existsByEmail(VALID_REQUEST.email())).thenReturn(false);
         when(userRepository.existsByUsername(VALID_REQUEST.username())).thenReturn(false);
-        when(passwordEncoder.encode(VALID_REQUEST.password())).thenReturn("hashed");
 
         User savedUser = new User(VALID_REQUEST.username(), VALID_REQUEST.email());
         savedUser.setId(1L);
@@ -56,7 +53,6 @@ class UserServiceTest {
     void register_createsUserProfileAndAccount() {
         when(userRepository.existsByEmail(any())).thenReturn(false);
         when(userRepository.existsByUsername(any())).thenReturn(false);
-        when(passwordEncoder.encode(any())).thenReturn("hashed");
 
         User savedUser = new User(VALID_REQUEST.username(), VALID_REQUEST.email());
         savedUser.setId(1L);
@@ -65,20 +61,24 @@ class UserServiceTest {
         userService.register(VALID_REQUEST);
 
         verify(userRepository).save(any(User.class));
-        verify(profileRepository).save(any(Profile.class));
-        verify(accountRepository).save(any(Account.class));
+        verify(profileService).createProfile(savedUser);
+        verify(accountService)
+                .createAccount(
+                        eq(savedUser),
+                        eq(Provider.PASSWORD),
+                        eq(VALID_REQUEST.email()),
+                        eq(VALID_REQUEST.password()));
     }
 
     @Test
-    void register_hashesPasswordBeforeSaving() {
+    void register_delegatesPasswordHashingToAccountService() {
         when(userRepository.existsByEmail(any())).thenReturn(false);
         when(userRepository.existsByUsername(any())).thenReturn(false);
-        when(passwordEncoder.encode(VALID_REQUEST.password())).thenReturn("hashed");
         when(userRepository.save(any())).thenReturn(new User("luka", "luka@mail.com"));
 
         userService.register(VALID_REQUEST);
 
-        verify(passwordEncoder).encode(VALID_REQUEST.password());
+        verify(accountService).createAccount(any(), any(), any(), eq(VALID_REQUEST.password()));
     }
 
     @Test

@@ -1,12 +1,10 @@
 package com.cotales.cotales_api.user.user;
 
+import com.cotales.cotales_api.auth.Provider;
 import com.cotales.cotales_api.common.exception.ConflictException;
-import com.cotales.cotales_api.user.account.Account;
-import com.cotales.cotales_api.user.account.AccountRepository;
-import com.cotales.cotales_api.user.profile.Profile;
-import com.cotales.cotales_api.user.profile.ProfileRepository;
+import com.cotales.cotales_api.user.account.AccountService;
+import com.cotales.cotales_api.user.profile.ProfileService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,9 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final AccountRepository accountRepository;
-    private final ProfileRepository profileRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final AccountService accountService;
+    private final ProfileService profileService;
 
     @Transactional
     public UserResponse register(CreateUserRequest request) {
@@ -28,15 +25,10 @@ public class UserService {
             throw new ConflictException("Username already in use");
         }
 
-        User user = userRepository.save(new User(request.username(), request.email()));
+        var user = userRepository.save(new User(request.username(), request.email()));
 
-        profileRepository.save(new Profile(user));
-        accountRepository.save(
-                new Account(
-                        user,
-                        "PASSWORD",
-                        request.email(),
-                        passwordEncoder.encode(request.password())));
+        profileService.createProfile(user);
+        accountService.createAccount(user, Provider.PASSWORD, request.email(), request.password());
 
         return new UserResponse(
                 user.getId(), user.getUsername(), user.getEmail(), user.getCreatedAt());

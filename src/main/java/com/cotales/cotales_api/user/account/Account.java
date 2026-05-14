@@ -1,5 +1,6 @@
 package com.cotales.cotales_api.user.account;
 
+import com.cotales.cotales_api.auth.Provider;
 import com.cotales.cotales_api.user.user.User;
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;
@@ -24,7 +25,8 @@ public class Account {
     private User user;
 
     @Column(name = "provider")
-    private String provider;
+    @Enumerated(EnumType.STRING)
+    private Provider provider;
 
     @Column(name = "provider_user_id")
     private String providerUserId;
@@ -39,7 +41,7 @@ public class Account {
     @CreationTimestamp
     private OffsetDateTime createdAt;
 
-    public Account(User user, String provider, String providerUserId, String passwordHash) {
+    public Account(User user, Provider provider, String providerUserId, String passwordHash) {
         this.user = user;
         this.provider = provider;
         this.providerUserId = providerUserId;
